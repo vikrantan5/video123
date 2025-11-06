@@ -1,9 +1,7 @@
 'use client';
 export const dynamic = 'force-dynamic';
 
-
-
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,23 +9,24 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { 
-  ArrowLeft, 
-  ThumbsUp, 
-  Share2, 
-  Eye, 
+import {
+  ArrowLeft,
+  ThumbsUp,
+  Share2,
+  Eye,
   Calendar,
   MessageSquare,
   Loader2,
   ExternalLink
 } from 'lucide-react';
 
-const VideoPlayer = () => {
+// ✅ Extracted main content into a separate component
+function WatchContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const videoId = searchParams.get('v');
   const platform = searchParams.get('platform') || 'youtube';
-  
+
   const [video, setVideo] = useState(null);
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -46,9 +45,7 @@ const VideoPlayer = () => {
     try {
       const response = await fetch(`/api/video/${videoId}`);
       const data = await response.json();
-      if (data.success) {
-        setVideo(data.video);
-      }
+      if (data.success) setVideo(data.video);
     } catch (error) {
       console.error('Error fetching video:', error);
     } finally {
@@ -59,15 +56,14 @@ const VideoPlayer = () => {
   const fetchComments = async () => {
     setCommentsLoading(true);
     try {
-      const endpoint = platform === 'youtube' 
-        ? `/api/youtube/comments/${videoId}`
-        : `/api/reddit/comments/${videoId}`;
-      
+      const endpoint =
+        platform === 'youtube'
+          ? `/api/youtube/comments/${videoId}`
+          : `/api/reddit/comments/${videoId}`;
+
       const response = await fetch(endpoint);
       const data = await response.json();
-      if (data.success) {
-        setComments(data.comments || []);
-      }
+      if (data.success) setComments(data.comments || []);
     } catch (error) {
       console.error('Error fetching comments:', error);
     } finally {
@@ -87,7 +83,7 @@ const VideoPlayer = () => {
     const now = new Date();
     const diff = now - date;
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    
+
     if (days === 0) return 'Today';
     if (days === 1) return 'Yesterday';
     if (days < 7) return `${days} days ago`;
@@ -102,7 +98,7 @@ const VideoPlayer = () => {
     const diff = now - date;
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const days = Math.floor(hours / 24);
-    
+
     if (hours < 1) return 'Just now';
     if (hours < 24) return `${hours} hours ago`;
     if (days < 7) return `${days} days ago`;
@@ -141,11 +137,7 @@ const VideoPlayer = () => {
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-3">
-          <Button 
-            variant="ghost" 
-            onClick={() => router.push('/')}
-            className="gap-2"
-          >
+          <Button variant="ghost" onClick={() => router.push('/')} className="gap-2">
             <ArrowLeft className="w-4 h-4" />
             Back to Videos
           </Button>
@@ -156,7 +148,6 @@ const VideoPlayer = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Video Section */}
           <div className="lg:col-span-2">
-            {/* Video Player */}
             <div className="aspect-video w-full bg-black rounded-lg overflow-hidden mb-4">
               <iframe
                 src={video.embedUrl}
@@ -167,12 +158,9 @@ const VideoPlayer = () => {
               />
             </div>
 
-            {/* Video Info */}
             <div className="space-y-4">
-              {/* Title */}
               <h1 className="text-2xl font-bold text-foreground">{video.title}</h1>
 
-              {/* Video Stats & Actions */}
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
                   <div className="flex items-center gap-1">
@@ -198,9 +186,9 @@ const VideoPlayer = () => {
                     Share
                   </Button>
                   {video.redditUrl && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       className="gap-2"
                       onClick={() => window.open(video.redditUrl, '_blank')}
                     >
@@ -224,10 +212,14 @@ const VideoPlayer = () => {
                       <h3 className="font-semibold text-foreground">{video.channel}</h3>
                     </div>
                   </div>
-                  
+
                   {video.description && (
                     <div className="mt-3">
-                      <p className={`text-sm text-muted-foreground whitespace-pre-wrap ${!showFullDescription ? 'line-clamp-3' : ''}`}>
+                      <p
+                        className={`text-sm text-muted-foreground whitespace-pre-wrap ${
+                          !showFullDescription ? 'line-clamp-3' : ''
+                        }`}
+                      >
                         {video.description}
                       </p>
                       {video.description.length > 200 && (
@@ -284,7 +276,7 @@ const VideoPlayer = () => {
                                   {formatCommentTime(comment.publishedAt)}
                                 </span>
                               </div>
-                              <p 
+                              <p
                                 className="text-sm text-foreground mb-2"
                                 dangerouslySetInnerHTML={{ __html: comment.text }}
                               />
@@ -308,7 +300,7 @@ const VideoPlayer = () => {
             </div>
           </div>
 
-          {/* Sidebar - Related Videos (Optional) */}
+          {/* Sidebar */}
           <div className="lg:col-span-1">
             <Card>
               <CardContent className="p-4">
@@ -323,6 +315,13 @@ const VideoPlayer = () => {
       </div>
     </div>
   );
-};
+}
 
-export default VideoPlayer;
+// ✅ Main export with Suspense wrapper
+export default function Page() {
+  return (
+    <Suspense fallback={<div className="p-10 text-center">Loading video...</div>}>
+      <WatchContent />
+    </Suspense>
+  );
+}
