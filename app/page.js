@@ -273,11 +273,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { PlayCircle, Youtube, Loader2, TrendingUp, Calendar, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
@@ -309,11 +309,21 @@ const VideoCard = ({ video, onClick }) => {
       onClick={() => onClick(video)}
     >
       <div className="relative aspect-video overflow-hidden bg-muted">
-        <img
-          src={video.thumbnail || '/api/placeholder/400/225'}
-          alt={video.title}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-        />
+        {video.thumbnail ? (
+          <img
+            src={video.thumbnail}
+            alt={video.title}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = 'https://images.unsplash.com/photo-1611162616475-46b635cb6868?w=400&h=225&fit=crop';
+            }}
+          />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+            <PlayCircle className="w-16 h-16 text-primary/40" />
+          </div>
+        )}
         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
           <PlayCircle className="w-16 h-16 text-white" />
         </div>
@@ -341,46 +351,17 @@ const VideoCard = ({ video, onClick }) => {
   );
 };
 
-const VideoPlayer = ({ video, onClose }) => {
-  if (!video) return null;
-
-  return (
-    <Dialog open={!!video} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl bg-background border-border">
-        <DialogHeader>
-          <DialogTitle className="text-foreground">{video.title}</DialogTitle>
-        </DialogHeader>
-        <div className="aspect-video w-full bg-black rounded-lg overflow-hidden">
-          <iframe
-            src={video.embedUrl}
-            title={video.title}
-            className="w-full h-full"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          />
-        </div>
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Badge variant="outline">{video.platform === 'youtube' ? 'YouTube' : 'Reddit'}</Badge>
-            <span>•</span>
-            <span>{video.channel}</span>
-          </div>
-          {video.description && (
-            <p className="text-sm text-muted-foreground line-clamp-3">{video.description}</p>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
 const App = () => {
+  const router = useRouter();
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [platform, setPlatform] = useState('all');
   const [sortBy, setSortBy] = useState('recent');
-  const [selectedVideo, setSelectedVideo] = useState(null);
   const [activeTab, setActiveTab] = useState('all');
+  
+  const handleVideoClick = (video) => {
+    router.push(`/watch?v=${video.videoId}&platform=${video.platform}`);
+  };
 
   const fetchVideos = async (source = 'db') => {
     setLoading(true);
@@ -519,14 +500,11 @@ const App = () => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredVideos.map((video) => (
-              <VideoCard key={video.id} video={video} onClick={setSelectedVideo} />
+              <VideoCard key={video.id} video={video} onClick={handleVideoClick} />
             ))}
           </div>
         )}
       </div>
-
-      {/* Video Player Modal */}
-      <VideoPlayer video={selectedVideo} onClose={() => setSelectedVideo(null)} />
     </div>
   );
 };

@@ -11,7 +11,7 @@ import os
 from datetime import datetime
 
 # Configuration
-BASE_URL = "https://videohub-2048.preview.emergentagent.com"
+BASE_URL = "https://comment-view.preview.emergentagent.com"
 API_BASE = f"{BASE_URL}/api"
 
 def log_test_result(test_name, success, message, response_data=None):
@@ -295,6 +295,221 @@ def test_mongodb_storage():
     log_test_result("MongoDB Storage Complete", True, f"Storage working correctly with {len(videos)} total videos")
     return True
 
+def test_youtube_comments():
+    """Test YouTube Comments API"""
+    print("=" * 60)
+    print("TESTING YOUTUBE COMMENTS API")
+    print("=" * 60)
+    
+    # First get a real YouTube video ID from trending
+    print("Getting YouTube video ID from trending...")
+    success, data = test_api_endpoint(
+        f"{API_BASE}/youtube/trending",
+        expected_fields=['success', 'videos'],
+        test_name="Get Video ID for Comments"
+    )
+    
+    if not success or not data.get('videos'):
+        log_test_result("YouTube Comments", False, "Could not get video ID from trending API")
+        return False
+    
+    video_id = data['videos'][0].get('videoId')
+    if not video_id:
+        log_test_result("YouTube Comments", False, "No videoId found in trending video")
+        return False
+    
+    print(f"Testing comments for video ID: {video_id}")
+    
+    # Test comments endpoint
+    endpoint = f"{API_BASE}/youtube/comments/{video_id}"
+    success, data = test_api_endpoint(
+        endpoint,
+        expected_fields=['success', 'count', 'comments'],
+        test_name="YouTube Comments API"
+    )
+    
+    if not success:
+        return False
+    
+    comments = data.get('comments', [])
+    if len(comments) == 0:
+        log_test_result("YouTube Comments", False, "No comments returned")
+        return False
+    
+    # Validate comment schema
+    required_comment_fields = ['id', 'author', 'authorImage', 'text', 'likeCount', 'publishedAt', 'replyCount']
+    sample_comment = comments[0]
+    
+    for field in required_comment_fields:
+        if field not in sample_comment:
+            log_test_result("YouTube Comment Schema", False, f"Missing field: {field}")
+            return False
+    
+    # Validate data types
+    if not isinstance(sample_comment.get('likeCount'), int):
+        log_test_result("YouTube Comment Schema", False, f"likeCount should be integer, got: {type(sample_comment.get('likeCount'))}")
+        return False
+    
+    if not isinstance(sample_comment.get('replyCount'), int):
+        log_test_result("YouTube Comment Schema", False, f"replyCount should be integer, got: {type(sample_comment.get('replyCount'))}")
+        return False
+    
+    log_test_result("YouTube Comments Complete", True, f"Successfully fetched {len(comments)} comments with correct schema")
+    return True
+
+def test_reddit_comments():
+    """Test Reddit Comments API (Mock)"""
+    print("=" * 60)
+    print("TESTING REDDIT COMMENTS API (MOCK)")
+    print("=" * 60)
+    
+    # Use any video ID since it's mock data
+    test_video_id = "test_reddit_video_123"
+    
+    endpoint = f"{API_BASE}/reddit/comments/{test_video_id}"
+    success, data = test_api_endpoint(
+        endpoint,
+        expected_fields=['success', 'count', 'comments', 'isMock'],
+        test_name="Reddit Comments API (Mock)"
+    )
+    
+    if not success:
+        return False
+    
+    # Verify it's marked as mock
+    if not data.get('isMock'):
+        log_test_result("Reddit Comments Mock Flag", False, "Missing isMock: true flag")
+        return False
+    
+    comments = data.get('comments', [])
+    if len(comments) == 0:
+        log_test_result("Reddit Comments", False, "No mock comments returned")
+        return False
+    
+    # Validate comment schema matches YouTube format
+    required_comment_fields = ['id', 'author', 'authorImage', 'text', 'likeCount', 'publishedAt', 'replyCount']
+    sample_comment = comments[0]
+    
+    for field in required_comment_fields:
+        if field not in sample_comment:
+            log_test_result("Reddit Comment Schema", False, f"Missing field: {field}")
+            return False
+    
+    # Validate data types
+    if not isinstance(sample_comment.get('likeCount'), int):
+        log_test_result("Reddit Comment Schema", False, f"likeCount should be integer, got: {type(sample_comment.get('likeCount'))}")
+        return False
+    
+    log_test_result("Reddit Comments Complete", True, f"Successfully fetched {len(comments)} mock comments with correct schema and isMock flag")
+    return True
+
+def test_single_video_retrieval():
+    """Test Single Video Retrieval API"""
+    print("=" * 60)
+    print("TESTING SINGLE VIDEO RETRIEVAL API")
+    print("=" * 60)
+    
+    # First get a video ID from the database
+    print("Getting video ID from database...")
+    success, data = test_api_endpoint(
+        f"{API_BASE}/videos",
+        expected_fields=['success', 'videos'],
+        test_name="Get Video ID for Single Retrieval"
+    )
+    
+    if not success or not data.get('videos'):
+        log_test_result("Single Video Retrieval", False, "Could not get video ID from database")
+        return False
+    
+    test_video = data['videos'][0]
+    video_id = test_video.get('videoId')
+    if not video_id:
+        log_test_result("Single Video Retrieval", False, "No videoId found in database video")
+        return False
+    
+    print(f"Testing single video retrieval for ID: {video_id}")
+    
+    # Test single video endpoint
+    endpoint = f"{API_BASE}/video/{video_id}"
+    success, data = test_api_endpoint(
+        endpoint,
+        expected_fields=['success', 'video'],
+        test_name="Single Video Retrieval API"
+    )
+    
+    if not success:
+        return False
+    
+    video = data.get('video')
+    if not video:
+        log_test_result("Single Video Retrieval", False, "No video object returned")
+        return False
+    
+    # Validate the returned video has the correct ID
+    if video.get('videoId') != video_id:
+        log_test_result("Single Video ID Match", False, f"Expected {video_id}, got {video.get('videoId')}")
+        return False
+    
+    # Validate video schema
+    required_fields = ['videoId', 'platform', 'title', 'embedUrl']
+    for field in required_fields:
+        if field not in video:
+            log_test_result("Single Video Schema", False, f"Missing field: {field}")
+            return False
+    
+    log_test_result("Single Video Retrieval Complete", True, f"Successfully retrieved video: {video.get('title', 'Unknown')[:50]}...")
+    return True
+
+def test_reddit_thumbnail_fix():
+    """Test Reddit Thumbnail Fix"""
+    print("=" * 60)
+    print("TESTING REDDIT THUMBNAIL FIX")
+    print("=" * 60)
+    
+    # Test Reddit videos endpoint and check thumbnails
+    endpoint = f"{API_BASE}/reddit/videos"
+    success, data = test_api_endpoint(
+        endpoint,
+        expected_fields=['success', 'videos'],
+        test_name="Reddit Videos for Thumbnail Check"
+    )
+    
+    if not success:
+        return False
+    
+    videos = data.get('videos', [])
+    if len(videos) == 0:
+        log_test_result("Reddit Thumbnail Fix", False, "No Reddit videos to check thumbnails")
+        return False
+    
+    # Check thumbnail quality
+    valid_thumbnails = 0
+    total_videos = len(videos)
+    
+    for video in videos:
+        thumbnail = video.get('thumbnail')
+        if thumbnail and thumbnail != 'default' and thumbnail.startswith('http'):
+            valid_thumbnails += 1
+    
+    thumbnail_percentage = (valid_thumbnails / total_videos) * 100
+    
+    if thumbnail_percentage < 50:  # At least 50% should have valid thumbnails
+        log_test_result("Reddit Thumbnail Quality", False, f"Only {thumbnail_percentage:.1f}% of videos have valid thumbnails")
+        return False
+    
+    # Check for specific thumbnail improvements
+    youtube_linked_videos = [v for v in videos if 'youtube.com' in v.get('embedUrl', '') or 'youtu.be' in v.get('embedUrl', '')]
+    
+    if youtube_linked_videos:
+        sample_yt_video = youtube_linked_videos[0]
+        thumbnail = sample_yt_video.get('thumbnail', '')
+        if not thumbnail.startswith('https://img.youtube.com/vi/'):
+            log_test_result("YouTube Thumbnail Format", False, f"YouTube video should use YouTube thumbnail format, got: {thumbnail}")
+            return False
+    
+    log_test_result("Reddit Thumbnail Fix Complete", True, f"{thumbnail_percentage:.1f}% of videos have valid thumbnails ({valid_thumbnails}/{total_videos})")
+    return True
+
 def run_all_tests():
     """Run all backend tests"""
     print("🚀 STARTING BACKEND API TESTS")
@@ -305,11 +520,17 @@ def run_all_tests():
     
     test_results = {}
     
-    # Test in priority order
+    # Test in priority order - existing tests first
     test_results['youtube_trending'] = test_youtube_trending()
     test_results['reddit_videos'] = test_reddit_videos()
     test_results['database_videos'] = test_get_videos_database()
     test_results['mongodb_storage'] = test_mongodb_storage()
+    
+    # New feature tests
+    test_results['youtube_comments'] = test_youtube_comments()
+    test_results['reddit_comments'] = test_reddit_comments()
+    test_results['single_video_retrieval'] = test_single_video_retrieval()
+    test_results['reddit_thumbnail_fix'] = test_reddit_thumbnail_fix()
     
     # Summary
     print("=" * 80)
