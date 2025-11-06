@@ -11,8 +11,8 @@ import os
 from datetime import datetime
 
 # Configuration
-BASE_URL = "https://comment-view.preview.emergentagent.com"
-API_BASE = f"{BASE_URL}/api"
+NEXT_PUBLIC_BASE_URL = "https://comment-view.preview.emergentagent.com"
+API_BASE = f"{NEXT_PUBLIC_BASE_URL}/api"
 
 def log_test_result(test_name, success, message, response_data=None):
     """Log test results with timestamp"""
@@ -514,7 +514,7 @@ def run_all_tests():
     """Run all backend tests"""
     print("🚀 STARTING BACKEND API TESTS")
     print("=" * 80)
-    print(f"Base URL: {BASE_URL}")
+    print(f"Base URL: {NEXT_PUBLIC_BASE_URL}")
     print(f"API Base: {API_BASE}")
     print("=" * 80)
     
