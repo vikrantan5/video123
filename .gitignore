@@ -1,5 +1,7 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
+
+.env
 # IDE and editors
 .idea/
 .vscode/
@@ -15,6 +17,13 @@ node_modules/
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
+.env
+
+# environment variables
+.env
+.env.local
+.env.development
+.env.production
 
 # Testing
 /coverage
